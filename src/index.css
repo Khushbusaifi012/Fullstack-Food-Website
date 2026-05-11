@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-brand: #ff5722;
+  --color-surface: #f5f5f5;
+  --color-panel: #ffffff;
+  --radius-card: 1rem;
+  --shadow-soft: 0 4px 24px rgb(0 0 0 / 0.06);
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-surface: #0c0c0c;
+  --color-panel: #161616;
+  --shadow-soft: 0 4px 24px rgb(0 0 0 / 0.45);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
+  color: rgb(23 23 23);
+  -webkit-font-smoothing: antialiased;
+}
+
+html.dark body {
+  color: rgb(245 245 245);
+}
