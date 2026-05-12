@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CartPanel } from "../components/CartPanel";
@@ -70,6 +70,10 @@ export default function DashboardPage() {
   const [menuSearch, setMenuSearch] = useState("");
   const [menuSort, setMenuSort] = useState<MenuSortId>("default");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [orderCelebration, setOrderCelebration] = useState<{
+    total: number;
+    orderId: string;
+  } | null>(null);
 
   const cart = useCart();
 
@@ -118,6 +122,15 @@ export default function DashboardPage() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [filterSheetOpen]);
+
+  useEffect(() => {
+    if (!orderCelebration) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOrderCelebration(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [orderCelebration]);
 
   const cartAside = (
     <CartPanel
@@ -186,9 +199,7 @@ export default function DashboardPage() {
           window.dispatchEvent(new Event(CHECKOUT_DRAFT_CLEARED_EVENT));
           cart.clearCart();
           setCartOpen(false);
-          showToast(
-            `Order placed — ${formatInr(order.total)} (ref ${order.id.slice(0, 8)}…)`,
-          );
+          setOrderCelebration({ total: order.total, orderId: order.id });
         } catch (e) {
           showToast(e instanceof Error ? e.message : "Could not place order.");
         }
@@ -518,6 +529,68 @@ export default function DashboardPage() {
                 className="w-full rounded-2xl bg-brand py-3 text-sm font-bold text-white shadow-lg shadow-brand/30 transition hover:brightness-110"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {orderCelebration ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="order-celebration-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55 backdrop-blur-[3px]"
+            aria-label="Close"
+            onClick={() => setOrderCelebration(null)}
+          />
+          <div className="relative w-full max-w-[min(100%,22rem)] overflow-hidden rounded-[1.75rem] bg-panel shadow-[0_24px_64px_-12px_rgba(0,0,0,0.35)] ring-2 ring-brand/25 dark:bg-neutral-900 dark:ring-brand/30">
+            <div
+              className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full bg-brand/25 blur-2xl"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -bottom-10 -left-8 h-32 w-32 rounded-full bg-amber-400/15 blur-2xl dark:bg-amber-400/10"
+              aria-hidden
+            />
+            <div className="relative px-6 pb-6 pt-8 text-center">
+              <p className="text-4xl leading-none" aria-hidden>
+                🎉✅
+              </p>
+              <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand/12 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-brand dark:bg-brand/20">
+                <Sparkles className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                All set
+              </p>
+              <h2
+                id="order-celebration-title"
+                className="mt-4 text-2xl font-extrabold tracking-tight text-neutral-900 dark:text-white"
+              >
+                Order confirmed
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                Your order has been confirmed. Thank you — we&apos;ll start preparing it right away.
+              </p>
+              <div className="mt-5 rounded-2xl border border-black/[0.06] bg-surface/90 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                  Total paid
+                </p>
+                <p className="mt-0.5 text-2xl font-black tabular-nums text-brand">
+                  {formatInr(orderCelebration.total)}
+                </p>
+                <p className="mt-2 break-all font-mono text-[10px] text-neutral-500 dark:text-neutral-500">
+                  Ref · {orderCelebration.orderId}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOrderCelebration(null)}
+                className="mt-6 w-full rounded-2xl bg-brand py-3.5 text-sm font-bold text-white shadow-lg shadow-brand/35 transition hover:brightness-110 active:scale-[0.99]"
+              >
+                Got it
               </button>
             </div>
           </div>
