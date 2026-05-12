@@ -2,6 +2,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Download,
   MapPin,
   Package,
   Phone,
@@ -16,6 +17,7 @@ import type { AuthUser } from "../context/AuthContext";
 import { getStoredAuthToken } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { formatInr } from "../lib/formatMoney";
+import { downloadOrderInvoice } from "../lib/orderInvoice";
 import {
   fetchMyOrders,
   fetchOrderById,
@@ -205,20 +207,40 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
                   <p className="mt-1.5 max-w-full break-all font-mono text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-500">
                     ID {detail.id}
                   </p>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(detail.id);
-                        showToast("Order ID copied.");
-                      } catch {
-                        showToast("Could not copy — select the ID and copy manually.");
-                      }
-                    }}
-                    className="mt-2 text-xs font-semibold text-brand hover:underline"
-                  >
-                    Copy order ID
-                  </button>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(detail.id);
+                          showToast("Order ID copied.");
+                        } catch {
+                          showToast("Could not copy — select the ID and copy manually.");
+                        }
+                      }}
+                      className="text-xs font-semibold text-brand hover:underline"
+                    >
+                      Copy order ID
+                    </button>
+                    <span className="text-neutral-300 dark:text-neutral-600" aria-hidden>
+                      ·
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await downloadOrderInvoice(detail);
+                          showToast("Invoice PDF downloaded.");
+                        } catch {
+                          showToast("Could not download invoice.");
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs font-bold text-brand transition hover:bg-brand/15 dark:border-brand/30 dark:bg-brand/[0.12]"
+                    >
+                      <Download className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                      Download invoice
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="shrink-0 text-left sm:text-right">
