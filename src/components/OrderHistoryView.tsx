@@ -17,7 +17,7 @@ import type { AuthUser } from "../context/AuthContext";
 import { getStoredAuthToken } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { formatInr } from "../lib/formatMoney";
-import { downloadOrderInvoice } from "../lib/orderInvoice";
+import { downloadOrderInvoice, paymentMethodMarkSrc, preloadInvoicePdfLibs } from "../lib/orderInvoice";
 import {
   fetchMyOrders,
   fetchOrderById,
@@ -49,7 +49,7 @@ function paymentMethodLabel(id: string): string {
   switch (id) {
     case "online":
     case "wallet":
-      return "Pay online";
+      return "Paytm";
     case "paypal":
       return "PayPal";
     case "visa":
@@ -87,6 +87,10 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
   const [loadingList, setLoadingList] = useState(false);
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  useEffect(() => {
+    preloadInvoicePdfLibs();
+  }, []);
 
   const loadList = useCallback(async () => {
     const token = getStoredAuthToken();
@@ -167,6 +171,7 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
 
   if (detail) {
     const isDelivery = detail.deliveryMode === "delivery";
+    const paymentMark = paymentMethodMarkSrc(detail.paymentMethod);
 
     return (
       <div className="space-y-5 pb-4">
@@ -229,8 +234,18 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
                       type="button"
                       onClick={async () => {
                         try {
-                          await downloadOrderInvoice(detail);
-                          showToast("Invoice PDF downloaded.");
+                          const result = await downloadOrderInvoice(detail);
+                          if (result.delivery === "saved_picker") {
+                            showToast("Invoice saved where you chose.");
+                          } else if (result.delivery === "opened_viewer") {
+                            showToast(
+                              "PDF opened — use Share or the browser menu to save it to your files.",
+                            );
+                          } else {
+                            showToast(
+                              "Invoice PDF downloaded — check your Downloads folder (or browser download bar).",
+                            );
+                          }
                         } catch {
                           showToast("Could not download invoice.");
                         }
@@ -365,10 +380,21 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
                   <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-brand" strokeWidth={2} />
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                      Payment
+                      Payment method
                     </dt>
-                    <dd className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                      {paymentMethodLabel(detail.paymentMethod)}
+                    <dd className="mt-1">
+                      {paymentMark ? (
+                        <img
+                          src={paymentMark}
+                          alt=""
+                          className="h-9 w-auto max-w-[7.5rem] object-contain"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                          {paymentMethodLabel(detail.paymentMethod)}
+                        </span>
+                      )}
                     </dd>
                   </div>
                 </div>

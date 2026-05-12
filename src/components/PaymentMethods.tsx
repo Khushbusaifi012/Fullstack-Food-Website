@@ -1,3 +1,8 @@
+import paypalMark from "../assets/payment/paypal.jpg";
+import paytmMark from "../assets/payment/paytm.png";
+import mcMark from "../assets/payment/mc.png";
+import visaMark from "../assets/payment/visa.png";
+
 export type PaymentMethodId = "paypal" | "visa" | "mastercard" | "online";
 
 type PaymentMethodsProps = {
@@ -8,24 +13,33 @@ type PaymentMethodsProps = {
 const methods: {
   id: PaymentMethodId;
   label: string;
+  mark: string;
   className: string;
 }[] = [
   {
     id: "paypal",
     label: "PayPal",
+    mark: paypalMark,
     className: "bg-[#003087] text-white",
   },
-  { id: "visa", label: "Visa", className: "bg-[#1A1F71] text-white" },
+  {
+    id: "visa",
+    label: "Visa",
+    mark: visaMark,
+    className: "bg-[#1A1F71] text-white",
+  },
   {
     id: "mastercard",
-    label: "MC",
+    label: "Mastercard",
+    mark: mcMark,
     className: "bg-gradient-to-br from-[#EB001B] to-[#F79E1B] text-white",
   },
   {
     id: "online",
-    label: "Pay",
+    label: "Paytm",
+    mark: paytmMark,
     className:
-      "bg-neutral-800 text-white ring-1 ring-inset ring-white/10",
+      "bg-gradient-to-br from-[#012b72] to-[#00a0e3] text-white ring-1 ring-inset ring-white/15",
   },
 ];
 
@@ -47,7 +61,8 @@ export function PaymentMethods({ selected, onSelect }: PaymentMethodsProps) {
               type="button"
               onClick={() => onSelect(m.id)}
               aria-pressed={isSel}
-              className={`flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl px-2 py-3 text-center text-[10px] font-extrabold uppercase tracking-wide shadow-md transition sm:aspect-[5/3] sm:min-h-0 ${
+              aria-label={m.label}
+              className={`flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl px-2 py-3 shadow-md transition sm:aspect-[5/3] sm:min-h-0 ${
                 m.className
               } ${
                 isSel
@@ -55,7 +70,12 @@ export function PaymentMethods({ selected, onSelect }: PaymentMethodsProps) {
                   : "opacity-95 hover:opacity-100 hover:brightness-110 active:scale-[0.98]"
               }`}
             >
-              {m.label}
+              <img
+                src={m.mark}
+                alt=""
+                className="h-8 w-auto max-w-[88%] object-contain select-none"
+                draggable={false}
+              />
             </button>
           );
         })}
