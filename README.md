@@ -24,13 +24,6 @@ npm install
 npm install --prefix server
 ```
 
-Create **`server/.env`** (this path is loaded by the API). Minimum:
-
-```env
-JWT_SECRET=change-me-use-at-least-16-chars
-MONGODB_URI=mongodb://127.0.0.1:27017/restaurant
-```
-
 Optional:
 
 | Variable | Purpose |
