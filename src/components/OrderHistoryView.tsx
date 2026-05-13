@@ -1,29 +1,34 @@
 import {
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
   CreditCard,
   Download,
   MapPin,
   Package,
   Phone,
   Receipt,
+  RefreshCw,
+  Route,
   StickyNote,
   Truck,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AuthUser } from "../context/AuthContext";
 import { getStoredAuthToken } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { formatInr } from "../lib/formatMoney";
 import { downloadOrderInvoice, paymentMethodMarkSrc, preloadInvoicePdfLibs } from "../lib/orderInvoice";
+import { getOrderTrackingSnapshot } from "../lib/orderTracking";
 import {
   fetchMyOrders,
   fetchOrderById,
   type OrderDetail,
   type OrderSummary,
 } from "../lib/ordersApi";
+import { OrderTrackingTimeline } from "./OrderTrackingTimeline";
 
 type OrderHistoryViewProps = {
   user: AuthUser | null;
@@ -87,6 +92,36 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
   const [loadingList, setLoadingList] = useState(false);
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailRefreshing, setDetailRefreshing] = useState(false);
+  const [deliveryCompleteModalOpen, setDeliveryCompleteModalOpen] = useState(false);
+  const trackingPrevRef = useRef<{ orderId: string | null; phase: number | null }>({
+    orderId: null,
+    phase: null,
+  });
+
+  useEffect(() => {
+    if (!detail) {
+      trackingPrevRef.current = { orderId: null, phase: null };
+      setDeliveryCompleteModalOpen(false);
+      return;
+    }
+    const snap = getOrderTrackingSnapshot(detail.status, detail.deliveryMode);
+    const prev = trackingPrevRef.current;
+
+    if (prev.orderId !== detail.id) {
+      trackingPrevRef.current = { orderId: detail.id, phase: snap.phase };
+      setDeliveryCompleteModalOpen(false);
+      return;
+    }
+
+    const prevPhase = prev.phase;
+    trackingPrevRef.current = { orderId: detail.id, phase: snap.phase };
+
+    if (snap.isCancelled || snap.phase !== 3) return;
+    if (prevPhase !== null && prevPhase !== 3 && prevPhase !== -1) {
+      setDeliveryCompleteModalOpen(true);
+    }
+  }, [detail]);
 
   useEffect(() => {
     preloadInvoicePdfLibs();
@@ -128,6 +163,27 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
       setLoadingDetail(false);
     }
   }
+
+  const refreshOpenOrderDetail = useCallback(async () => {
+    const id = detail?.id;
+    if (!id) return;
+    const token = getStoredAuthToken();
+    if (!token) {
+      showToast("Please log in again.");
+      navigate("/login", { state: { from: "/menu" } });
+      return;
+    }
+    setDetailRefreshing(true);
+    try {
+      const d = await fetchOrderById(token, id);
+      setDetail(d);
+      showToast("Order updated.");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Could not refresh order.");
+    } finally {
+      setDetailRefreshing(false);
+    }
+  }, [detail?.id, navigate, showToast]);
 
   if (!user) {
     return (
@@ -172,8 +228,11 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
   if (detail) {
     const isDelivery = detail.deliveryMode === "delivery";
     const paymentMark = paymentMethodMarkSrc(detail.paymentMethod);
+    const trackingSnap = getOrderTrackingSnapshot(detail.status, detail.deliveryMode);
+    const showDeliveredBanner = trackingSnap.phase === 3 && !trackingSnap.isCancelled;
 
     return (
+      <>
       <div className="space-y-5 pb-4">
         <button
           type="button"
@@ -270,6 +329,53 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
           </div>
 
           <div className="space-y-8 px-5 py-7 sm:px-7">
+            <section className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <SectionTitle icon={Route}>Track order</SectionTitle>
+                <button
+                  type="button"
+                  onClick={() => void refreshOpenOrderDetail()}
+                  disabled={detailRefreshing}
+                  className="inline-flex items-center gap-2 rounded-xl border border-black/[0.08] bg-surface/80 px-3 py-2 text-xs font-bold text-neutral-700 transition hover:border-brand/30 hover:bg-brand/5 hover:text-brand disabled:opacity-50 dark:border-white/10 dark:text-neutral-200 dark:hover:bg-brand/10"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${detailRefreshing ? "animate-spin" : ""}`}
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  {detailRefreshing ? "Refreshing…" : "Refresh status"}
+                </button>
+              </div>
+              {showDeliveredBanner ? (
+                <div
+                  role="status"
+                  className="rounded-2xl border border-emerald-500/35 bg-emerald-500/[0.09] px-4 py-4 dark:border-emerald-400/30 dark:bg-emerald-500/[0.12]"
+                >
+                  <div className="flex gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/25 text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="h-5 w-5" strokeWidth={2} aria-hidden />
+                    </span>
+                    <div className="min-w-0 pt-0.5">
+                      <p className="font-bold text-emerald-950 dark:text-emerald-50">
+                        {isDelivery ? "Delivered" : "Order complete"}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-emerald-900/85 dark:text-emerald-100/85">
+                        {isDelivery
+                          ? "Your order has been delivered. Thank you — we hope you enjoy your meal."
+                          : "Your pickup is done. Thank you — enjoy your meal."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="rounded-2xl border border-black/[0.06] bg-surface/70 px-4 py-5 sm:px-5 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                <OrderTrackingTimeline
+                  status={detail.status}
+                  deliveryMode={detail.deliveryMode}
+                />
+              </div>
+            </section>
+
             <section className="space-y-4">
               <SectionTitle icon={Package}>Items</SectionTitle>
               <ul className="space-y-2">
@@ -403,6 +509,52 @@ export function OrderHistoryView({ user, onBack }: OrderHistoryViewProps) {
           </div>
         </article>
       </div>
+
+      {deliveryCompleteModalOpen ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="order-delivered-dialog-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55 backdrop-blur-[3px]"
+            aria-label="Close"
+            onClick={() => setDeliveryCompleteModalOpen(false)}
+          />
+          <div className="relative w-full max-w-[min(100%,26rem)] overflow-hidden rounded-[1.75rem] bg-panel shadow-[0_24px_64px_-12px_rgba(0,0,0,0.35)] ring-2 ring-emerald-500/30 dark:bg-neutral-900 dark:ring-emerald-400/25">
+            <div
+              className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full bg-emerald-400/20 blur-2xl dark:bg-emerald-500/15"
+              aria-hidden
+            />
+            <div className="relative px-6 pb-6 pt-8 text-center">
+              <p className="text-4xl leading-none" aria-hidden>
+                ✅🙏
+              </p>
+              <h2
+                id="order-delivered-dialog-title"
+                className="mt-4 text-2xl font-extrabold tracking-tight text-neutral-900 dark:text-white"
+              >
+                {isDelivery ? "Delivered!" : "All done!"}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                {isDelivery
+                  ? "Your order has just been marked delivered. Enjoy your meal — thank you for ordering with us."
+                  : "Your pickup order is complete. Enjoy — thanks for choosing us."}
+              </p>
+              <button
+                type="button"
+                onClick={() => setDeliveryCompleteModalOpen(false)}
+                className="mt-6 w-full rounded-2xl bg-emerald-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition hover:brightness-110 active:scale-[0.99] dark:bg-emerald-500 dark:shadow-emerald-500/25"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      </>
     );
   }
 

@@ -18,7 +18,7 @@ export type DbOrder = {
   id: string;
   userId: number;
   createdAt: string;
-  status: "placed";
+  status: string;
   deliveryMode: "delivery" | "pickup";
   fullName: string;
   phone: string;

@@ -8,6 +8,7 @@ import { FeedbackView } from "../components/FeedbackView";
 import { FoodOrderView } from "../components/FoodOrderView";
 import { MessageView } from "../components/MessageView";
 import { OrderHistoryView } from "../components/OrderHistoryView";
+import { OrderTrackingTimeline } from "../components/OrderTrackingTimeline";
 import { PaymentDetailsView } from "../components/PaymentDetailsView";
 import { Header } from "../components/Header";
 import type { PaymentMethodId } from "../components/PaymentMethods";
@@ -73,6 +74,7 @@ export default function DashboardPage() {
   const [orderCelebration, setOrderCelebration] = useState<{
     total: number;
     orderId: string;
+    deliveryMode: "delivery" | "pickup";
   } | null>(null);
 
   const cart = useCart();
@@ -199,7 +201,11 @@ export default function DashboardPage() {
           window.dispatchEvent(new Event(CHECKOUT_DRAFT_CLEARED_EVENT));
           cart.clearCart();
           setCartOpen(false);
-          setOrderCelebration({ total: order.total, orderId: order.id });
+          setOrderCelebration({
+            total: order.total,
+            orderId: order.id,
+            deliveryMode,
+          });
         } catch (e) {
           showToast(e instanceof Error ? e.message : "Could not place order.");
         }
@@ -548,7 +554,7 @@ export default function DashboardPage() {
             aria-label="Close"
             onClick={() => setOrderCelebration(null)}
           />
-          <div className="relative w-full max-w-[min(100%,22rem)] overflow-hidden rounded-[1.75rem] bg-panel shadow-[0_24px_64px_-12px_rgba(0,0,0,0.35)] ring-2 ring-brand/25 dark:bg-neutral-900 dark:ring-brand/30">
+          <div className="relative w-full max-w-[min(100%,26rem)] overflow-hidden rounded-[1.75rem] bg-panel shadow-[0_24px_64px_-12px_rgba(0,0,0,0.35)] ring-2 ring-brand/25 dark:bg-neutral-900 dark:ring-brand/30">
             <div
               className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full bg-brand/25 blur-2xl"
               aria-hidden
@@ -584,6 +590,16 @@ export default function DashboardPage() {
                 <p className="mt-2 break-all font-mono text-[10px] text-neutral-500 dark:text-neutral-500">
                   Ref · {orderCelebration.orderId}
                 </p>
+              </div>
+              <div className="mt-5 rounded-2xl border border-black/[0.06] bg-surface/80 px-3 py-4 text-left dark:border-white/10 dark:bg-white/[0.04]">
+                <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                  Track your order
+                </p>
+                <OrderTrackingTimeline
+                  status="placed"
+                  deliveryMode={orderCelebration.deliveryMode}
+                  compact
+                />
               </div>
               <button
                 type="button"

@@ -1,11 +1,17 @@
+import "./loadEnv.js";
 import cors from "cors";
-import "dotenv/config";
 import express from "express";
 import { authRouter } from "./routes/auth.js";
 import { feedbackRouter } from "./routes/feedback.js";
 import { messagesRouter } from "./routes/messages.js";
 import { ordersRouter } from "./routes/orders.js";
 import { connectMongo } from "./mongo.js";
+
+if (!process.env.ORDER_STATUS_ADMIN_SECRET?.trim()) {
+  console.warn(
+    "[restaurant-api] ORDER_STATUS_ADMIN_SECRET is not set — PATCH /api/orders/:id/status will return 503 until you add it to server/.env",
+  );
+}
 
 const jwtSecret = process.env.JWT_SECRET?.trim();
 if (!jwtSecret || jwtSecret.length < 16) {
