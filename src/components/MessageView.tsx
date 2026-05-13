@@ -1,5 +1,5 @@
-import { MessageSquare } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { ChevronDown, MessageSquare } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AuthUser } from "../context/AuthContext";
 import { getStoredAuthToken } from "../context/AuthContext";
@@ -28,6 +28,10 @@ function formatShortDate(iso: string): string {
   }
 }
 
+function orderRowLabel(o: OrderSummary): string {
+  return `${formatShortDate(o.createdAt)} — ${formatInr(o.total)} · ${o.id.slice(0, 8)}…`;
+}
+
 export function MessageView({ user, onBack }: MessageViewProps) {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -38,6 +42,16 @@ export function MessageView({ user, onBack }: MessageViewProps) {
   const [history, setHistory] = useState<SupportMessage[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [sending, setSending] = useState(false);
+  const [orderMenuOpen, setOrderMenuOpen] = useState(false);
+  const orderPickerRef = useRef<HTMLDivElement>(null);
+
+  const relatedOrderTriggerLabel =
+    orderId === ""
+      ? "None"
+      : (() => {
+          const hit = orders.find((x) => x.id === orderId);
+          return hit ? orderRowLabel(hit) : `Order ${orderId.slice(0, 8)}…`;
+        })();
 
   const loadData = useCallback(async () => {
     const token = getStoredAuthToken();
@@ -60,6 +74,25 @@ export function MessageView({ user, onBack }: MessageViewProps) {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!orderMenuOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      const el = orderPickerRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setOrderMenuOpen(false);
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOrderMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [orderMenuOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -155,28 +188,80 @@ export function MessageView({ user, onBack }: MessageViewProps) {
             </label>
 
             <label className="mt-5 block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+              <span
+                id="message-related-order-label"
+                className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+              >
                 Related order{" "}
                 <span className="font-normal normal-case tracking-normal text-neutral-400">(optional)</span>
               </span>
-              <div className="relative">
-                <select
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
-                  className="h-12 w-full cursor-pointer appearance-none rounded-2xl border border-black/10 bg-surface py-2 pl-4 pr-10 text-sm font-medium text-neutral-900 outline-none transition focus:border-brand/40 focus:ring-2 focus:ring-brand/25 dark:border-white/[0.1] dark:bg-black/25 dark:text-neutral-100"
+              <div ref={orderPickerRef} className="relative">
+                <button
+                  type="button"
+                  id="message-related-order-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded={orderMenuOpen}
+                  aria-labelledby="message-related-order-label"
+                  disabled={loadingList}
+                  onClick={() => setOrderMenuOpen((o) => !o)}
+                  className="flex h-12 w-full cursor-pointer items-center justify-between gap-2 rounded-2xl border border-black/10 bg-surface px-4 py-2 text-left text-sm font-medium text-neutral-900 outline-none transition hover:border-black/15 focus-visible:border-brand/40 focus-visible:ring-2 focus-visible:ring-brand/25 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.1] dark:bg-black/25 dark:text-neutral-100 dark:hover:border-white/[0.14]"
                 >
-                  <option value="">None</option>
-                  {orders.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {formatShortDate(o.createdAt)} — {formatInr(o.total)} · {o.id.slice(0, 8)}…
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500">
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </span>
+                  <span className="min-w-0 truncate">{relatedOrderTriggerLabel}</span>
+                  <ChevronDown
+                    aria-hidden
+                    className={`h-5 w-5 shrink-0 text-neutral-400 transition-transform dark:text-neutral-500 ${orderMenuOpen ? "rotate-180" : ""}`}
+                    strokeWidth={2}
+                  />
+                </button>
+                {orderMenuOpen ? (
+                  <ul
+                    role="listbox"
+                    aria-labelledby="message-related-order-label"
+                    className="absolute left-0 right-0 top-full z-[100] mt-1.5 max-h-60 overflow-y-auto overflow-x-hidden rounded-2xl border border-black/10 bg-surface py-1 shadow-xl shadow-black/10 ring-1 ring-black/[0.04] dark:border-white/[0.12] dark:bg-neutral-950 dark:shadow-black/40 dark:ring-white/[0.06]"
+                  >
+                    <li role="presentation">
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={orderId === ""}
+                        className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium transition ${
+                          orderId === ""
+                            ? "bg-brand/15 text-neutral-900 dark:bg-brand/20 dark:text-neutral-50"
+                            : "text-neutral-800 hover:bg-black/[0.04] dark:text-neutral-200 dark:hover:bg-white/[0.06]"
+                        }`}
+                        onClick={() => {
+                          setOrderId("");
+                          setOrderMenuOpen(false);
+                        }}
+                      >
+                        None
+                      </button>
+                    </li>
+                    {orders.map((o) => {
+                      const selected = orderId === o.id;
+                      return (
+                        <li key={o.id} role="presentation">
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium transition ${
+                              selected
+                                ? "bg-brand/15 text-neutral-900 dark:bg-brand/20 dark:text-neutral-50"
+                                : "text-neutral-800 hover:bg-black/[0.04] dark:text-neutral-200 dark:hover:bg-white/[0.06]"
+                            }`}
+                            onClick={() => {
+                              setOrderId(o.id);
+                              setOrderMenuOpen(false);
+                            }}
+                          >
+                            {orderRowLabel(o)}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
               </div>
             </label>
 
