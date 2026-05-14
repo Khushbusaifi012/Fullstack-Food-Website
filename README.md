@@ -44,10 +44,8 @@ Run from the **repo root**:
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Vite dev server (usually [http://localhost:5173](http://localhost:5173)); `/api` is proxied to `http://localhost:4000` |
-| `npm run dev:api` | API only (`tsx watch` in `server/`) |
 | `npm run dev:full` | Frontend + API together (requires two ports free) |
 | `npm run build` | Production build of the client |
-| `npm run preview` | Preview the production build locally |
 
 Server-only:
 
