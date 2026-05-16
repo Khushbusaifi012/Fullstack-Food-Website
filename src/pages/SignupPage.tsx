@@ -37,24 +37,23 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen font-sans">
-      <div className="relative hidden flex-1 flex-col justify-between bg-gradient-to-br from-amber-400 via-orange-500 to-brand p-10 text-white lg:flex">
-        <div className="flex items-center gap-2">
+      <div className="relative hidden flex-1 flex-col bg-gradient-to-br from-amber-400 via-orange-500 to-brand p-10 text-white lg:flex">
+        <div className="flex shrink-0 items-center gap-2">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
             <Pizza className="h-6 w-6" strokeWidth={2.25} />
           </span>
           <span className="text-2xl font-bold tracking-tight">foodislice</span>
         </div>
-        <div className="max-w-md">
-          <h1 className="text-4xl font-bold leading-tight">
-            Create your account — it&apos;s quick and free.
-          </h1>
-          <p className="mt-4 text-lg text-white/90">
-            Track orders, reorder favourites, and pay securely from one place.
-          </p>
+        <div className="flex flex-1 flex-col justify-center">
+          <div className="max-w-md">
+            <h1 className="text-4xl font-bold leading-tight">
+              Create your account — it&apos;s quick and free.
+            </h1>
+            <p className="mt-4 text-lg text-white/90">
+              Track orders, reorder favourites, and pay securely from one place.
+            </p>
+          </div>
         </div>
-        <p className="text-sm text-white/70">
-          Demo app — no real server; passwords are not stored.
-        </p>
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center bg-surface px-4 py-10">
